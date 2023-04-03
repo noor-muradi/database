@@ -136,8 +136,9 @@ Once both mysql nodes are up and running execute below query in both mysql nodes
 ` SELECT * FROM performance_schema.replication_group_members;`
 Use below command to execute mysql queries directly from kubectl. (change pod name from mysql-0 to mysql-1 to access mysql-1)
 
-```kubectl exec --stdin --tty mysql-0 -- /bin/sh -c "mysql -uroot -proot -e 'SELECT * FROM performance_schema.replication_group_members;'"```
-
+``` 
+kubectl exec --stdin --tty mysql-0 -- /bin/sh -c "mysql -uroot -proot -e 'SELECT * FROM performance_schema.replication_group_members;'" 
+```
 two mysql pods are up and running
 
 ![aaa](https://user-images.githubusercontent.com/24589033/229521259-ec8aa9d3-83df-4a0e-a28a-5a4686850408.jpg)
