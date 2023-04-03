@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  labels:
+    name: mysql
+spec:
+  serviceName: mysql
+  replicas: 2
+  selector:
+    matchLabels:
+      name: mysql
+  template:
+    metadata:
+      labels:
+        name: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql/mysql-server:5.7.35
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "1234"
+        - name: MYSQL_USER
+          value: "myuser"
+        - name: MYSQL_PASSWORD
+          value: "4321"                         
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "/mnt/data/prep-work.sh"]        
+        imagePullPolicy: Always        
+        volumeMounts:
+        - name: conf-vol
+          mountPath: /etc/my.cnf
+          subPath: my.cnf
+        - name: conf-vol
+          mountPath: /mnt/data
+        - name: conf-vol
+          mountPath: /docker-entrypoint-initdb.d/b-init-mysql-cluster.sql
+          subPath: b-init-mysql-cluster.sql
+        - name: conf-vol
+          mountPath: /docker-entrypoint-initdb.d/a-init-test-script.sql
+          subPath: a-init-test-script.sql
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"  
+      initContainers:
+      - name: init-set
+        image: alpine:latest
+        command:
+        - /mnt/scripts/run.sh
+        volumeMounts:
+        - name: scripts-vol
+          mountPath: /mnt/scripts
+        - name: conf-vol
+          mountPath: /mnt/data
+      volumes:
+      - name: scripts-vol
+        configMap:
+          name: my-set-config
+          defaultMode: 0555
+      - name: conf-vol
+        emptyDir: {}

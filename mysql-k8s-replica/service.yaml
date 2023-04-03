@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels:
+    name: mysql
+spec:
+  clusterIP: None
+  ports:
+  - name: mysql
+    port: 3306
+  - name: gr-port
+    port: 33061  
+  selector:
+    name: mysql
