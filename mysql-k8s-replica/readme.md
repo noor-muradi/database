@@ -163,3 +163,6 @@ Note that i haven’t used any persistent volumes (PVs) for the pods in this dem
 This concludes the test and confirms MySQL group replication is able to handle inbound writes as well as read requests during pod failure scenarios without any database service interruptions.
 
 On final note; if you are a business user whom needs a high available business solution deployed in kubernetes, but of cause doesn’t want to handle any of the technical hassle, Connext GO is the solution for you. Connext GO allows you to build and deploy business solutions on top of kubernetes platforms without managing any of Kubernetes cluster internals.
+
+
+source: https://medium.com/@pumudu88/mysql-group-replication-in-kubernetes-3fb770b0eac4
