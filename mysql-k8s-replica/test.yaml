@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configs
+data:
+  run.sh: |
+    #!/bin/bash
+
+    username=myuser
+    password=mypass
+    dbname=myDB
+    table=test
+    host=mysql
+    TS=$(date +%s)
+
+    while true
+    do
+      myvar=$(mysql -h$host -D$dbname -u$username -p$password -se "SELECT increment FROM $table WHERE id=(SELECT MAX(id) FROM $table);")
+      echo $myvar
+      echo "before increment: $result"
+      
+      if [ $result = $myvar ]
+      then
+        echo OK
+        state=OK
+      else
+        echo NOK
+        state=NOK  
+      fi
+
+      result=$( expr $myvar + 1 )
+      echo "after increment: $result"
+
+      mysql -h$host -D$dbname -u$username -p$password -e"INSERT INTO $table (UTS, increment) VALUES (\"$state\", \"$result\");"
+
+      read -p "Continuing in 0.5 Seconds...." -t 0.5
+      echo "Continuing ...."
+
+    done
+    exit 0
+  set-0.conf: |
+    test set-0    
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mysql-client-pod
+  labels:
+    app: mysql-client-pod
+spec:
+  containers:
+  - name: myapp-container
+    image: mysql/mysql-server:5.7.35
+    command: [ "/bin/sh", "-c", "--" ]
+    args: [ "/mnt/configs/run.sh" ]
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    volumeMounts:
+    - name: test-config-vol
+      mountPath: /mnt/configs     
+
+  volumes:
+    - name: test-config-vol
+      configMap:
+        name: test-configs
+        defaultMode: 0555
