@@ -1,152 +1,192 @@
-# SQL Common commands
+# 📘 SQL Common Commands
 
-## A. POSTGRES SQL Commands
+This guide provides a quick reference for **PostgreSQL** and **MySQL** database management, including user/role setup, permissions, and common administrative tasks.
 
-0. Connecting to database:
-```
+---
+
+## 🐘 A. PostgreSQL Commands
+
+### 0. Connecting to Database
+```bash
 sudo apt install postgresql-client -y
 psql -h <host> -U <username> -d <database>
 ```
 
-### User management:
+---
 
-1. Check current databse and user:
+### 👤 User Management
 
-```
+#### 1. Check Current Database and User
+```sql
 SELECT current_database(), current_user;
 ```
 
-2. create user:
+---
 
-```
-CREATE USER app_user WITH PASSWORD 'strong_password_here';
-```
+### 🔐 Role & Permission Setup
 
-3. grant db access
-
-```
-GRANT ALL PRIVILEGES ON DATABASE db_name TO app_user;
-```
-
-4. grant scheme access and table creation:
-
-```
-GRANT USAGE, CREATE ON SCHEMA public TO app_user;
+#### Create Roles
+```sql
+CREATE ROLE readonly NOLOGIN;
+CREATE ROLE writer   NOLOGIN;
+CREATE ROLE admin    NOLOGIN;
 ```
 
-5. Grant full access to all existing objects:
+- **readonly** → Query-only access  
+- **writer** → Read + write access (insert, update, delete)  
+- **admin** → Full privileges including database management  
 
-```
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO app_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO app_user;
-GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO app_user;
-```
+---
 
-6. Set default privilege for future objects:
+#### Grant Permissions
 
-```
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT ALL PRIVILEGES ON TABLES TO app_user;
+**Readonly Role**
+```sql
+GRANT USAGE ON SCHEMA public TO readonly;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT ALL PRIVILEGES ON SEQUENCES TO app_user;
+GRANT SELECT ON TABLES TO readonly;
+```
+
+**Writer Role**
+```sql
+GRANT readonly TO writer;
+GRANT USAGE, CREATE ON SCHEMA public TO writer;
+GRANT INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO writer;
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO writer;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT ALL PRIVILEGES ON FUNCTIONS TO app_user;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO writer;
 
-```
-
-7. Change user password:
-   
-```
-ALTER USER app_user WITH PASSWORD 'new_strong_password';
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO writer;
 ```
 
-### DB Management
+**Admin Role**
+```sql
+GRANT ALL PRIVILEGES ON DATABASE demo_db TO admin;
+GRANT ALL PRIVILEGES ON SCHEMA public TO admin;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO admin;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO admin;
 
-1. List Tables
-   
-```
-\dt
-or
-SELECT tablename FROM pg_tables WHERE schemaname = current_schema();
-```
-2. Dump and restore database:
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT ALL PRIVILEGES ON TABLES TO admin;
 
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT ALL PRIVILEGES ON SEQUENCES TO admin;
+
+ALTER ROLE admin CREATEDB;
 ```
+
+---
+
+#### Create Users
+```sql
+CREATE USER writer_user WITH PASSWORD 'password';
+CREATE USER read_user   WITH PASSWORD 'password';
+CREATE USER admin_user  WITH PASSWORD 'password';
+```
+
+---
+
+#### Assign Roles to Users
+```sql
+GRANT readonly TO read_user;
+GRANT writer   TO writer_user;
+GRANT admin    TO admin_user;
+```
+
+---
+
+### ⚙️ Database Management
+
+**List All Tables in Current Schema**
+```sql
+SELECT tablename 
+FROM pg_tables 
+WHERE schemaname = current_schema();
+```
+
+**Dump & Restore Database**
+```bash
 pg_dump -U app_user -d my_database > my_database.sql
 psql -U app_user -d my_database < my_database.sql
-
-```   
-
-## B. MySQL Commands
-
-0. Connecting to database
-
 ```
+
+---
+
+## 🐬 B. MySQL Commands
+
+### 0. Connecting to Database
+```bash
 sudo apt install mysql-client -y
 mysql -h <host> -u <username> -p <database>
 ```
-### User Management
-1. Check current database and user
 
-```
+---
+
+### 👤 User Management
+
+#### 1. Check Current Database and User
+```sql
 SELECT DATABASE(), USER();
 ```
-2. Create user
 
-```
+#### 2. Create User
+```sql
 CREATE USER 'app_user'@'%' IDENTIFIED BY 'strong_password_here';
 ```
-'%' means the user can connect from any host. Replace with 'localhost' if only local connections are allowed.
+- `'%'` → Allows connection from any host  
+- Use `'localhost'` for local-only connections  
 
-3. Grant database access
-```
-
+#### 3. Grant Database Access
+```sql
 GRANT ALL PRIVILEGES ON db_name.* TO 'app_user'@'%';
 ```
 
-
-4. Grant schema access and table creation
-
-Already covered by the GRANT ALL PRIVILEGES ON db_name.* above.
-
-If you want only creation rights:
-```
+#### 4. Grant Schema Access & Table Creation
+Already covered by `GRANT ALL PRIVILEGES`.  
+For **creation-only rights**:
+```sql
 GRANT CREATE ON db_name.* TO 'app_user'@'%';
 ```
 
-5. Grant full access to all existing objects
-
-Same as step 3. MySQL doesn’t separate sequences/functions the way Postgres does.
-
-To cover everything:
-
-```
+#### 5. Grant Full Access to All Existing Objects
+```sql
 GRANT ALL PRIVILEGES ON db_name.* TO 'app_user'@'%';
 ```
 
-6. Set default privileges for future objects
-MySQL doesn’t have ALTER DEFAULT PRIVILEGES.
-Instead, privileges apply automatically to new objects in the database if you grant ALL PRIVILEGES ON db_name.*.
+#### 6. Default Privileges for Future Objects
+- MySQL does **not** support `ALTER DEFAULT PRIVILEGES`.  
+- Granting `ALL PRIVILEGES ON db_name.*` ensures new objects are automatically accessible.
 
-7. Change user password:
-
-```
+#### 7. Change User Password
+```sql
 ALTER USER 'app_user'@'%' IDENTIFIED BY 'new_strong_password';
 ```
 
-### DB Management
+---
 
-1. List tables
-```
+### ⚙️ Database Management
+
+**List Tables**
+```sql
 SHOW TABLES;
 ```
-2. Dump and restore database:
 
-```
+**Dump & Restore Database**
+```bash
 mysqldump -h <host> -u <username> -p <database> > backup_file.sql
 mysql -u app_user -p my_database < my_database.sql
 ```
 
+---
 
+✨ **Best Practices**
+- Always use **strong passwords** and avoid hardcoding them in scripts.  
+- Use **environment variables** or secret managers for credentials.  
+- Apply the **principle of least privilege**: grant only the permissions necessary.  
+- Regularly back up databases and test restores to ensure reliability.  
+
+---
