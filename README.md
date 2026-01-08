@@ -114,6 +114,31 @@ pg_dump -U app_user -d my_database > my_database.sql
 psql -U app_user -d my_database < my_database.sql
 ```
 
+**Lock Relation break**
+
+Find the query:
+
+```
+SELECT
+  pid,
+  usename,
+  state,
+  wait_event_type,
+  wait_event,
+  now() - xact_start AS xact_age,
+  query
+FROM pg_stat_activity
+WHERE state != 'idle'
+ORDER BY xact_age DESC;
+```
+
+Terminate it:
+
+```
+SELECT pg_terminate_backend(<pid>);
+```
+
+
 ---
 
 ## 🐬 B. MySQL Commands
