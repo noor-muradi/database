@@ -1,0 +1,74 @@
+name: Flyway – demo_db.public
+
+on:
+  # Uncomment push triggers if you want automatic runs
+  # push:
+  #   branches:
+  #     - develop
+  #     - release
+  #     - master
+
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: "Target branch (controls environment)"
+        required: true
+        type: choice
+        options:
+          - develop
+          - release
+          - master
+      flyway_command:
+        description: "Flyway command"
+        required: true
+        default: migrate
+        type: choice
+        options:
+          - migrate
+          - validate
+          - info
+          - baseline
+      baseline_version:
+        description: "Baseline version (ONLY when command=baseline)"
+        required: false
+        default: "1"
+
+jobs:
+  flyway:
+    runs-on: dev
+
+    # Resolve environment from branch
+    environment: >
+      ${{ github.event_name == 'workflow_dispatch' && inputs.target_branch == 'develop' && 'dev' ||
+         github.event_name == 'workflow_dispatch' && inputs.target_branch == 'release' && 'qa' ||
+         github.event_name == 'workflow_dispatch' && inputs.target_branch == 'master' && 'prod' ||
+         github.ref_name == 'develop' && 'dev' ||
+         github.ref_name == 'release' && 'qa' ||
+         github.ref_name == 'master' && 'prod' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Flyway CLI on demo_db.public
+        run: |
+          # Resolve the command
+          FLYWAY_CMD="${{ github.event_name == 'workflow_dispatch' && inputs.flyway_command || 'migrate' }}"
+
+          # Include baseline version only if baseline
+          if [ "$FLYWAY_CMD" = "baseline" ]; then
+            BASELINE_OPTION="-baselineVersion=${{ github.event_name == 'workflow_dispatch' && inputs.baseline_version || '1' }}"
+          else
+            BASELINE_OPTION=""
+          fi
+
+          # Run Flyway
+          flyway \
+            -url=jdbc:postgresql://${{ secrets.DB_HOST }}:5432/demo_db \
+            -user=${{ secrets.DB_USER }} \
+            -password=${{ secrets.DB_PASSWORD }} \
+            -schemas=public \
+            -defaultSchema=public \
+            -locations=filesystem:migrations/demo_db \
+            $FLYWAY_CMD \
+            $BASELINE_OPTION
