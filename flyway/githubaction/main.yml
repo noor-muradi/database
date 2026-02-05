@@ -1,23 +1,27 @@
-name: Flyway – demo_db.public
+name: Flyway – demodb.myschema
 
 on:
-  # Uncomment push triggers if you want automatic runs
-  # push:
-  #   branches:
-  #     - develop
-  #     - release
-  #     - master
+  push:
+    paths-ignore:
+    - '.github/**'
+    - 'migrations/demodb/another_schema/**'
+    - 'README.md'
+    - 'docs/**'
+    branches:
+      - develop
+      - release
+      - master
 
   workflow_dispatch:
     inputs:
       target_branch:
-        description: "Target branch (controls environment)"
+        description: "Target environment"
         required: true
         type: choice
         options:
-          - develop
-          - release
-          - master
+          - dev
+          - qa
+          - prod
       flyway_command:
         description: "Flyway command"
         required: true
@@ -35,13 +39,21 @@ on:
 
 jobs:
   flyway:
-    runs-on: dev
+    runs-on: ${{ 
+      (
+        (github.event_name == 'workflow_dispatch' && inputs.target_branch == 'prod')
+        || github.ref_name == 'master'
+      )
+      && fromJSON('["self-hosted","prod"]')
+      || fromJSON('["self-hosted","dev"]')
+      }}
+
 
     # Resolve environment from branch
     environment: >
-      ${{ github.event_name == 'workflow_dispatch' && inputs.target_branch == 'develop' && 'dev' ||
-         github.event_name == 'workflow_dispatch' && inputs.target_branch == 'release' && 'qa' ||
-         github.event_name == 'workflow_dispatch' && inputs.target_branch == 'master' && 'prod' ||
+      ${{ github.event_name == 'workflow_dispatch' && inputs.target_branch == 'dev' && 'dev' ||
+         github.event_name == 'workflow_dispatch' && inputs.target_branch == 'qa' && 'qa' ||
+         github.event_name == 'workflow_dispatch' && inputs.target_branch == 'prod' && 'prod' ||
          github.ref_name == 'develop' && 'dev' ||
          github.ref_name == 'release' && 'qa' ||
          github.ref_name == 'master' && 'prod' }}
@@ -49,8 +61,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: >
+            ${{ github.event_name == 'workflow_dispatch' && inputs.target_branch == 'dev' && 'develop' ||
+               github.event_name == 'workflow_dispatch' && inputs.target_branch == 'qa' && 'release' ||
+               github.event_name == 'workflow_dispatch' && inputs.target_branch == 'prod' && 'master' ||
+               github.ref }}
 
-      - name: Run Flyway CLI on demo_db.public
+      - name: Run Flyway CLI on demodb.myschema
         run: |
           # Resolve the command
           FLYWAY_CMD="${{ github.event_name == 'workflow_dispatch' && inputs.flyway_command || 'migrate' }}"
@@ -64,11 +82,11 @@ jobs:
 
           # Run Flyway
           flyway \
-            -url=jdbc:postgresql://${{ secrets.DB_HOST }}:5432/demo_db \
+            -url=jdbc:postgresql://${{ secrets.DB_HOST }}:5432/qrdb \
             -user=${{ secrets.DB_USER }} \
             -password=${{ secrets.DB_PASSWORD }} \
-            -schemas=public \
-            -defaultSchema=public \
-            -locations=filesystem:migrations/demo_db \
+            -schemas=myschema \
+            -defaultSchema=myschema \
+            -locations=filesystem:migrations/demodb/myschema \
             $FLYWAY_CMD \
             $BASELINE_OPTION
