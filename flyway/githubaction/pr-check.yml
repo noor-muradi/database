@@ -1,0 +1,80 @@
+name: PR Check - demodb.myschema
+
+on:
+  pull_request:
+    branches: [develop, release, master]
+    paths:
+      - "migrations/demodb/myschema/**"
+
+jobs:
+  pr-schema-v2-check:
+    name: myschema PR Guard
+    runs-on: dev
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 1️. Enforce immutability of existing migrations
+      - name: Block edits to existing migrations
+        if: github.base_ref == 'develop'
+        run: |
+          BASE=origin/${{ github.base_ref }}
+
+          MODIFIED=$(git diff --name-only $BASE...HEAD \
+            | grep '^migrations/demodb/myschema/V[0-9]\+__.*\.sql' || true)
+
+          for f in $MODIFIED; do
+            if git show $BASE:"$f" >/dev/null 2>&1; then
+              echo "❌ Illegal modification of existing migration: $f"
+              exit 1
+            fi
+          done
+
+      # 2. Allow only ONE new migration per PR
+      - name: Enforce single migration per PR
+        if: github.base_ref == 'develop'
+        run: |
+          COUNT=$(git diff --name-only origin/${{ github.base_ref }}...HEAD \
+            | grep '^migrations/demodb/myschema/V[0-9]\+__.*\.sql' | wc -l)
+
+          if [ "$COUNT" -ne 1 ]; then
+            echo "❌ Exactly one migration file must be added per PR (found $COUNT)"
+            exit 1
+          fi
+
+      # 3. Enforce naming convention
+      - name: Enforce migration naming convention
+        run: |
+          BAD_NAMES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD \
+            | grep '^migrations/demodb/myschema/' \
+            | grep -vE '^migrations/demodb/myschema/V[0-9]+__[a-z0-9_]+\.sql$' || true)
+
+          if [ -n "$BAD_NAMES" ]; then
+            echo "❌ Invalid migration naming detected:"
+            echo "$BAD_NAMES"
+            echo "Expected: V<NUMBER>__<lowercase_description>.sql"
+            exit 1
+          fi
+
+      # 4️. Enforce version ordering (must be greater than existing)
+      - name: Enforce migration version ordering
+        if: github.base_ref == 'develop'
+        run: |
+          BASE=origin/${{ github.base_ref }}
+
+          MAX_EXISTING=$(git ls-tree -r $BASE migrations/demodb/myschema \
+            | sed -n 's/.*V\([0-9]\+\)__.*\.sql/\1/p' \
+            | sort -n | tail -1)
+
+          NEW_VERSION=$(git diff --name-only $BASE...HEAD \
+            | sed -n 's/.*V\([0-9]\+\)__.*\.sql/\1/p')
+
+          if [ -n "$MAX_EXISTING" ] && [ "$NEW_VERSION" -le "$MAX_EXISTING" ]; then
+            echo "❌ New migration version ($NEW_VERSION) must be greater than existing max ($MAX_EXISTING)"
+            exit 1
+          fi
+
+          echo "✅ Migration version $NEW_VERSION is valid (greater than $MAX_EXISTING)"
