@@ -1,10 +1,20 @@
+# Pre-requisites
 
-# change schema owner to flyway
+1. Create flyway user in postgres
+   
+   ```
+   CREATE USER flyway WITH PASSWORD 'abc123';
+   ```
+   
+3. Change schema owner to flyway
+   
+```
+ALTER SCHEMA myschema OWNER TO flyway;
+```
 
-ALTER SCHEMA schema_v2 OWNER TO flyway;
-
-# change all existing tables ownership to flyway:
-
+3. change all existing tables ownership to flyway:
+   
+```
 DO $$
 DECLARE
     r RECORD;
@@ -13,7 +23,7 @@ BEGIN
     FOR r IN
         SELECT schemaname, tablename
         FROM pg_tables
-        WHERE schemaname = 'schema_v2'
+        WHERE schemaname = 'myschema'
     LOOP
         EXECUTE format(
             'ALTER TABLE %I.%I OWNER TO flyway',
@@ -25,7 +35,7 @@ BEGIN
     FOR r IN
         SELECT sequence_schema, sequence_name
         FROM information_schema.sequences
-        WHERE sequence_schema = 'schema_v2'
+        WHERE sequence_schema = 'myschema'
     LOOP
         EXECUTE format(
             'ALTER SEQUENCE %I.%I OWNER TO flyway',
@@ -37,7 +47,7 @@ BEGIN
     FOR r IN
         SELECT table_schema, table_name
         FROM information_schema.views
-        WHERE table_schema = 'schema_v2'
+        WHERE table_schema = 'myschema'
     LOOP
         EXECUTE format(
             'ALTER VIEW %I.%I OWNER TO flyway',
@@ -50,7 +60,7 @@ BEGIN
         SELECT n.nspname, p.proname, pg_get_function_identity_arguments(p.oid) args
         FROM pg_proc p
         JOIN pg_namespace n ON n.oid = p.pronamespace
-        WHERE n.nspname = 'schema_v2'
+        WHERE n.nspname = 'myschema'
     LOOP
         EXECUTE format(
             'ALTER FUNCTION %I.%I(%s) OWNER TO flyway',
@@ -59,22 +69,24 @@ BEGIN
     END LOOP;
 END$$;
 
+```
 
+4. change default privileges for future tables, (should be run by flyway user)
 
-# change default privileges for future tables, should be run by flyway
-
-ALTER DEFAULT PRIVILEGES IN SCHEMA schema_v2
+```
+ALTER DEFAULT PRIVILEGES IN SCHEMA myschema
 	GRANT SELECT ON TABLES TO readonly;
 
-ALTER DEFAULT PRIVILEGES IN SCHEMA schema_v2
+ALTER DEFAULT PRIVILEGES IN SCHEMA myschema
 	GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO writer;
 
-ALTER DEFAULT PRIVILEGES IN SCHEMA schema_v2
+ALTER DEFAULT PRIVILEGES IN SCHEMA myschema
 	GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO writer;
 
-
-ALTER DEFAULT PRIVILEGES IN SCHEMA schema_v2
+ALTER DEFAULT PRIVILEGES IN SCHEMA myschema
 	GRANT ALL PRIVILEGES ON TABLES TO admin;
 
-ALTER DEFAULT PRIVILEGES IN SCHEMA schema_v2
+ALTER DEFAULT PRIVILEGES IN SCHEMA myschema
 	GRANT ALL PRIVILEGES ON SEQUENCES TO admin;
+
+```
