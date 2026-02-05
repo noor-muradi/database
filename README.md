@@ -190,6 +190,47 @@ GRANT ALL PRIVILEGES ON db_name.* TO 'app_user'@'%';
 ```sql
 ALTER USER 'app_user'@'%' IDENTIFIED BY 'new_strong_password';
 ```
+---
+
+### 🔐 Role Management
+
+1. Create roles
+
+```
+CREATE ROLE 'readonly';
+CREATE ROLE 'writer';
+CREATE ROLE 'admin';
+```
+
+2. Grant permission to the roles
+   
+   A. readonly
+```
+GRANT SELECT ON db.* TO 'readonly';
+```
+  B. writer
+```
+GRANT 'readonly' TO 'writer';
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON db.*
+TO 'writer';
+```
+C. admin
+
+```
+GRANT ALL PRIVILEGES ON db.* to admin
+```
+
+3. Assign roles to users:
+
+```
+CREATE USER 'app_user'@'%' IDENTIFIED BY 'password';
+
+GRANT 'writer' TO 'app_user'@'%';
+SET DEFAULT ROLE 'writer' TO 'app_user'@'%';
+
+```
 
 ---
 
