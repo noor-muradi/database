@@ -100,3 +100,5 @@ DB_HOST
 DB_PASSWORD
 DB_USER
 ```
+
+NOTE: This pipeline uses self-hosted runners as RDS are hosted in private subnets in VPC, and pipeline expects 2 runners one with `dev` label which will process `dev` and `qa` environment migrations, and one with `prod` label which will process production RDS migrations.
