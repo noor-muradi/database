@@ -90,3 +90,13 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA myschema
 	GRANT ALL PRIVILEGES ON SEQUENCES TO admin;
 
 ```
+
+5. Create 3 environments (dev,qa,prod) in GitHub Repo and in each environment
+
+create below 3 secrets:
+
+```
+DB_HOST
+DB_PASSWORD
+DB_USER
+```
