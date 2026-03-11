@@ -7,8 +7,24 @@ This guide provides a quick reference for **PostgreSQL** and **MySQL** database 
 ## 🐘 A. PostgreSQL Commands
 
 ### 0. Connecting to Database
+Install postgres client:
+
 ```bash
-sudo apt install postgresql-client -y
+sudo apt update
+sudo apt install -y curl ca-certificates gnupg
+
+sudo install -d /usr/share/postgresql-common/pgdg
+curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+  | sudo gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg
+
+  echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+| sudo tee /etc/apt/sources.list.d/pgdg.list
+
+sudo apt update
+sudo apt install postgresql-client-17
+```
+Connect:
+```
 psql -h <host> -U <username> -d <database>
 ```
 
@@ -110,8 +126,9 @@ WHERE schemaname = current_schema();
 
 **Dump & Restore Database**
 ```bash
-pg_dump -U app_user -d my_database > my_database.sql
-psql -U app_user -d my_database < my_database.sql
+pg_dump -h <db_endpoint> -U user -t <schema>.<table> <database> > table_backup.sql
+
+psql -h <db_endpoint> -U user -d <database> -f table_backup.sql
 ```
 
 **Lock Relation break**
